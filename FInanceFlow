@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Finance Flow – App</title>
+  <style>
+    /* ====== Reset & Layout ====== */
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans";
+      color: #e5e7eb; background: #0f172a; /* fallback */
+      background-image: radial-gradient(1200px 800px at 50% -200px, #1f2937 0%, #0f172a 60%);
+      min-height: 100svh; /* fix iOS address bar jump */
+      padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    }
+    .app { max-width: 900px; margin: 0 auto; display: grid; gap: 16px; }
+    .muted { color: #94a3b8; }
+    .card {
+      background: linear-gradient(180deg, #0b1220, #0a0f1a);
+      border: 1px solid #1f2937; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,.35);
+    }
+
+    /* ====== Header ====== */
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-logo { width: 28px; height: 28px; border-radius: 8px; background:#111827; display:grid; place-items:center; font-size:18px; }
+    .brand h1 { margin: 0; font-size: 18px; color: #cbd5e1; }
+    .install-btn { display:none; padding:10px 12px; border-radius: 10px; border:1px solid #263246; background:#0b1220; color:#e5e7eb; font-weight:600; }
+
+    /* ====== Balance card ====== */
+    .balance-card { padding: 18px; }
+    .balance-label { color:#94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing:.08em; }
+    .balance-value { font-size: clamp(34px, 7vw, 64px); font-weight: 800; margin: 8px 0 6px; }
+    .btn-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .btn {
+      flex: 1 1 180px; padding: 12px; border-radius: 12px; border:1px solid #243041; background:#0b1220; color:#e5e7eb; font-weight:700; cursor:pointer;
+      transition: transform .06s ease, border-color .2s ease, background .2s ease;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn.income { border-color: rgba(34,197,94,.35); }
+    .btn.expense { border-color: rgba(239,68,68,.35); }
+
+    /* ====== Transactions list ====== */
+    .list-card { overflow:hidden; }
+    .list-head { display:grid; grid-template-columns: 110px 1fr 110px 110px 48px; gap:10px; padding:12px; border-bottom:1px solid #162036; background:#0e1526; color:#94a3b8; font-size:12px; }
+    .rows { display:block; }
+    .row { display:grid; grid-template-columns: 110px 1fr 110px 110px 48px; gap:10px; padding:12px; border-bottom:1px solid #121a2b; align-items:center; }
+    .row:last-child { border-bottom:none; }
+    .pill { display:inline-flex; align-items:center; padding:6px 10px; border-radius:999px; border:1px solid #263246; font-size:12px; }
+    .pill.income { color:#86efac; border-color: rgba(34,197,94,.35); }
+    .pill.expense { color:#fca5a5; border-color: rgba(239,68,68,.35); }
+    .amount { text-align:right; font-weight:800; }
+    .amount.positive { color:#86efac; }
+    .amount.negative { color:#fca5a5; }
+    .empty { padding:16px; text-align:center; color:#94a3b8; font-style:italic; }
+    .icon-btn { background:transparent; border:1px solid #273246; border-radius:10px; width:36px; height:36px; display:grid; place-items:center; color:#94a3b8; cursor:pointer; }
+    .icon-btn:hover { border-color:#3a4a67; color:#cbd5e1; }
+
+    /* ====== Modal ====== */
+    .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+    .modal { width: 100%; max-width: 480px; background:#0b1020; border:1px solid #1f2937; border-radius:16px; overflow:hidden; box-shadow:0 20px 50px rgba(0,0,0,.5); }
+    .modal-hd, .modal-ft { padding:12px 16px; display:flex; align-items:center; justify-content: space-between; border-bottom:1px solid #162036; }
+    .modal-hd h3 { margin:0; font-size:16px; }
+    .modal-bd { padding: 16px; display:grid; gap:12px; }
+    label { display:block; font-size: 14px; color:#94a3b8; margin-bottom:6px; }
+    input[type="text"], input[type="date"], input[type="number"] { width:100%; padding:12px; border-radius:12px; background:#0a0f1a; border:1px solid #22314a; color:#e5e7eb; }
+    input:focus { border-color:#2f405e; outline:none; box-shadow: 0 0 0 4px rgba(59,130,246,.15); }
+    .modal-ft { border-top:1px solid #162036; }
+    .btn.primary { background: linear-gradient(180deg, #0ea45a, #0d8b4c); border-color: rgba(34,197,94,.45); }
+
+    /* ====== Mobile tweaks ====== */
+    @media (max-width: 460px) {
+      .list-head, .row { grid-template-columns: 86px 1fr 84px 92px 44px; gap:8px; }
+      .brand h1 { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-logo" id="logo">💶</div>
+        <h1>Finance Flow</h1>
+      </div>
+      <button id="installBtn" class="install-btn">App installieren</button>
+    </div>
+
+    <!-- Balance Card -->
+    <section class="card balance-card" aria-live="polite">
+      <div class="balance-label">Aktueller Kontostand</div>
+      <div id="balance" class="balance-value">0,00 €</div>
+      <div class="btn-row">
+        <button class="btn income" id="addIncomeBtn">➕ Einnahme buchen</button>
+        <button class="btn expense" id="addExpenseBtn">➖ Ausgabe buchen</button>
+      </div>
+      <div class="muted" style="margin-top:10px">Alle Daten bleiben nur auf diesem Gerät (localStorage).</div>
+    </section>
+
+    <!-- List Card -->
+    <section class="card list-card">
+      <div class="list-head">
+        <div>Datum</div>
+        <div>Grund</div>
+        <div>Typ</div>
+        <div style="text-align:right">Betrag</div>
+        <div></div>
+      </div>
+      <div class="rows" id="rows"></div>
+    </section>
+  </div>
+
+  <!-- Modal: Add Transaction -->
+  <div class="backdrop" id="backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal">
+      <div class="modal-hd">
+        <h3 id="modalTitle">Buchung hinzufügen</h3>
+        <button class="icon-btn" id="closeModal" aria-label="Schließen">✕</button>
+      </div>
+      <div class="modal-bd">
+        <div>
+          <label for="dateInput">Datum</label>
+          <input type="date" id="dateInput" required />
+        </div>
+        <div>
+          <label for="amountInput">Betrag</label>
+          <input type="number" id="amountInput" step="0.01" inputmode="decimal" placeholder="z. B. 49,90" required />
+        </div>
+        <div>
+          <label for="reasonInput">Grund</label>
+          <input type="text" id="reasonInput" maxlength="120" placeholder="Kurzbeschreibung" required />
+        </div>
+      </div>
+      <div class="modal-ft">
+        <button class="btn" id="cancelBtn">Abbrechen</button>
+        <button class="btn primary" id="saveBtn">Buchen</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ======================
+    //   PWA in ONE FILE 🙌
+    // ======================
+    (function setupPWA(){
+      // 1) Create icons from SVG data (so we don't need files)
+      const svgIcon = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'>
+        <defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop stop-color='#0ea5e9'/><stop offset='1' stop-color='#22c55e'/></linearGradient></defs>
+        <rect width='128' height='128' rx='24' fill='url(#g)'/>
+        <text x='64' y='78' font-size='64' text-anchor='middle' dominant-baseline='middle' font-family='Segoe UI Emoji, Apple Color Emoji'>💶</text>
+      </svg>`;
+      function svgUrl(size){
+        const blob = new Blob([svgIcon], {type:'image/svg+xml'});
+        return URL.createObjectURL(blob);
+      }
+      const icons = [192,512].map(sz=>({ src: svgUrl(sz), sizes: `${sz}x${sz}`, type: 'image/svg+xml', purpose: 'any' }));
+
+      // 2) Create a manifest dynamically
+      const manifest = {
+        name: 'Finance Flow', short_name: 'FinanceFlow',
+        start_url: '.', display: 'standalone', background_color:'#0f172a', theme_color:'#0f172a',
+        icons
+      };
+      const manBlob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+      const manUrl = URL.createObjectURL(manBlob);
+      const link = document.createElement('link'); link.rel='manifest'; link.href = manUrl; document.head.appendChild(link);
+
+      // 3) Register a simple offline Service Worker (cache-first)
+      const swCode = `self.addEventListener('install', e=>{ self.skipWaiting(); e.waitUntil(caches.open('ff-v1').then(c=>c.addAll(['./']))); });
+      self.addEventListener('activate', e=>{ clients.claim(); });
+      self.addEventListener('fetch', e=>{ e.respondWith(caches.match(e.request).then(r=> r || fetch(e.request))); });`;
+      if('serviceWorker' in navigator){
+        const blob = new Blob([swCode], {type:'text/javascript'});
+        const url = URL.createObjectURL(blob);
+        navigator.serviceWorker.register(url).catch(()=>{});
+      }
+
+      // 4) Show install prompt button when available
+      let deferredPrompt = null;
+      const installBtn = document.getElementById('installBtn');
+      window.addEventListener('beforeinstallprompt', (e)=>{
+        e.preventDefault(); deferredPrompt = e; installBtn.style.display = 'inline-block';
+      });
+      installBtn?.addEventListener('click', async ()=>{
+        if(!deferredPrompt) return; deferredPrompt.prompt();
+        try { await deferredPrompt.userChoice; } catch(_){}
+        deferredPrompt = null; installBtn.style.display = 'none';
+      });
+    })();
+
+    // ======================
+    //      App Logic
+    // ======================
+    const fmt = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' });
+    const $ = (s)=>document.querySelector(s);
+    const rowsEl = $('#rows');
+    const balanceEl = $('#balance');
+    const backdrop = $('#backdrop');
+
+    let transactions = load();
+    let currentType = 'income'; // or 'expense'
+
+    function load(){ try{ const raw = localStorage.getItem('transactions'); const arr = raw? JSON.parse(raw): []; return Array.isArray(arr)? arr: []; } catch(e){ return []; } }
+    function save(){ localStorage.setItem('transactions', JSON.stringify(transactions)); }
+
+    function calcBalance(){ return transactions.reduce((s,t)=> s + t.amount, 0); }
+    function renderBalance(){ balanceEl.textContent = fmt.format(calcBalance()); }
+
+    function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+    function renderRows(){
+      if(!transactions.length){ rowsEl.innerHTML = `<div class="empty">Noch keine Buchungen. Tippe oben auf Einnahme/Ausgabe.</div>`; return; }
+      const sorted = [...transactions].sort((a,b)=> b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
+      rowsEl.innerHTML = '';
+      for(const t of sorted){
+        const signPos = t.amount > 0; const pillClass = signPos? 'income':'expense';
+        const row = document.createElement('div'); row.className='row';
+        row.innerHTML = `
+          <div>${t.date}</div>
+          <div>${escapeHtml(t.reason)}</div>
+          <div><span class="pill ${pillClass}">${signPos? 'Einnahme':'Ausgabe'}</span></div>
+          <div class="amount ${signPos? 'positive':'negative'}">${fmt.format(t.amount)}</div>
+          <div style="text-align:right"><button class="icon-btn" title="Löschen" data-id="${t.id}">🗑</button></div>`;
+        row.querySelector('button').addEventListener('click', ()=> deleteTx(t.id));
+        rowsEl.appendChild(row);
+      }
+    }
+
+    function openModal(type){
+      currentType = type;
+      $('#modalTitle').textContent = type==='income'? 'Einnahme buchen' : 'Ausgabe buchen';
+      const d = new Date(); const yyyy=d.getFullYear(); const mm=String(d.getMonth()+1).padStart(2,'0'); const dd=String(d.getDate()).padStart(2,'0');
+      $('#dateInput').value = `${yyyy}-${mm}-${dd}`;
+      $('#amountInput').value = '';
+      $('#reasonInput').value = '';
+      backdrop.style.display='flex'; backdrop.setAttribute('aria-hidden','false');
+      $('#amountInput').focus();
+    }
+    function closeModal(){ backdrop.style.display='none'; backdrop.setAttribute('aria-hidden','true'); }
+
+    function saveTx(){
+      const date = $('#dateInput').value;
+      const amountRaw = parseFloat(String($('#amountInput').value).replace(',', '.'));
+      const reason = $('#reasonInput').value.trim();
+      if(!date){ alert('Bitte Datum wählen.'); return; }
+      if(!reason){ alert('Bitte einen Grund eingeben.'); return; }
+      if(isNaN(amountRaw) || amountRaw === 0){ alert('Bitte gültigen Betrag ungleich 0 eingeben.'); return; }
+      const amt = currentType==='income' ? Math.abs(amountRaw) : -Math.abs(amountRaw);
+      const tx = { id: crypto.randomUUID? crypto.randomUUID(): String(Date.now()+Math.random()), type: currentType, date, reason, amount: amt, createdAt: Date.now() };
+      transactions.push(tx); save(); renderBalance(); renderRows(); closeModal();
+    }
+
+    function deleteTx(id){
+      if(!confirm('Buchung wirklich löschen?')) return;
+      const idx = transactions.findIndex(t=> t.id===id); if(idx<0) return;
+      transactions.splice(idx,1); save(); renderBalance(); renderRows();
+    }
+
+    // Wire up UI
+    document.getElementById('addIncomeBtn').addEventListener('click', ()=> openModal('income'));
+    document.getElementById('addExpenseBtn').addEventListener('click', ()=> openModal('expense'));
+    document.getElementById('closeModal').addEventListener('click', closeModal);
+    document.getElementById('cancelBtn').addEventListener('click', closeModal);
+    document.getElementById('saveBtn').addEventListener('click', saveTx);
+    document.getElementById('backdrop').addEventListener('click', (e)=>{ if(e.target===e.currentTarget) closeModal(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key==='Escape') closeModal(); });
+
+    // Initial paint
+    renderBalance();
+    renderRows();
+  </script>
+</body>
+</html>
